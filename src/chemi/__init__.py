@@ -1,1 +1,1 @@
-from NeighborhoodApplicabilityDomain import NeighborhoodApplicabilityDomain
+from chemi.NeighborhoodApplicabilityDomain import NeighborhoodApplicabilityDomain
