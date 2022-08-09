@@ -1,9 +1,8 @@
 import rdkit.Chem as Chem
 from sklearn.ensemble import RandomForestClassifier
 from rdkit.Chem import DataStructs
-from typing import Iterable, Union
+from typing import Iterable, Union, Optional
 import numpy as np
-from rdkit.Chem import AllChem
 
 import naclo
 
@@ -25,6 +24,7 @@ class NeighborhoodApplicabilityDomain:
         # Flags
         self.trained = False
         self.train_fp_type = None
+        self.calculate_applicability = self.__calculate_applicability
     
     @staticmethod
     def mols_2_fps(mols:Iterable[Chem.rdchem.Mol], fp_type:str='ecfp'):
@@ -48,7 +48,10 @@ class NeighborhoodApplicabilityDomain:
         return np.std(predictions, axis=0)
     
     def train_surrogate_model(self, domain_mols:Iterable[Chem.rdchem.Mol], domain_bin_labels:Iterable[int],
-                              fp_type:str='ecfp'):
+                              fp_type:str='ecfp', random_seed:Optional[int]=42):
+        if random_seed:
+            np.random.seed(random_seed)
+        
         # Fit model
         self.domain_fps = self.mols_2_fps(domain_mols, fp_type=fp_type)
         self.surrogate_random_forest.fit(self.domain_fps, domain_bin_labels)
@@ -68,21 +71,27 @@ class NeighborhoodApplicabilityDomain:
         self.trained = True
         self.train_fp_type = fp_type
         
-    def calculate_applicability(self, query_mols:Iterable[Chem.rdchem.Mol]):
-        if not self.trained:
-            raise RuntimeError('Must train model before calculating applicability')
-        else:
-            fps = self.mols_2_fps(query_mols, fp_type=self.train_fp_type)
-            
+        return self.surrogate_random_forest
+    
+    @staticmethod
+    def calculate_applicability(query_fps, domain_fps, biases, stdevs):
             applicability_scores = []
-            for fp in fps:
-                tanimoto_scores = DataStructs.BulkTanimotoSimilarity(fp, self.domain_fps)
+            for fp in query_fps:
+                tanimoto_scores = DataStructs.BulkTanimotoSimilarity(fp, domain_fps)
                 max_index = tanimoto_scores.index(max(tanimoto_scores))
                 
                 if tanimoto_scores[max_index] == 1:
                     applicability_scores.append(1)
                 else:
-                    W = self.biases[max_index]*(1 - self.stdevs[max_index])
+                    W = biases[max_index]*(1 - stdevs[max_index])
                     applicability_scores.append(tanimoto_scores[max_index]*W)
                     
             return applicability_scores
+        
+    def __calculate_applicability(self, query_mols:Iterable[Chem.rdchem.Mol]):
+        if not self.trained:
+            raise RuntimeError('Must train model before calculating applicability')
+        else:
+            fps = self.mols_2_fps(query_mols, fp_type=self.train_fp_type)
+            return NeighborhoodApplicabilityDomain.calculate_applicability(query_fps=fps, domain_fps=self.domain_fps,
+                                                                           biases=self.biases, stdevs=self.stdevs)

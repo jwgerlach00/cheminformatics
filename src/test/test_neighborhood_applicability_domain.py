@@ -1,6 +1,7 @@
 import unittest
 from rdkit import Chem, DataStructs
 from sklearn.ensemble import RandomForestClassifier
+import numpy as np
 
 import naclo
 
@@ -99,3 +100,14 @@ class TestNeighborhoodApplicabilityDomain(unittest.TestCase):
             scores = ad.calculate_applicability(query_mols=test_query_mols)
             self.assertEqual(len(scores), len(test_query_mols))
             self.assertEqual(scores[1], 1)  # Test query_mol 2 is in domain
+            
+            # Test that staticmethod obtains the same results
+            query_fps = NeighborhoodApplicabilityDomain.mols_2_fps(test_query_mols, fp_type=fp_type)
+            static_scores = NeighborhoodApplicabilityDomain.calculate_applicability(query_fps, ad.domain_fps,
+                                                                                    biases=ad.biases, stdevs=ad.stdevs)
+            self.assertTrue(
+                np.array_equal(
+                    scores,
+                    static_scores
+                )
+            )
