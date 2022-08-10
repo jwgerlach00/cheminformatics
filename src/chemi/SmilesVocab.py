@@ -1,16 +1,20 @@
 import copy
-import re
-from typing import Iterable, List
+from typing import Dict, Iterable, List
+import numpy as np
+
+from chemi import TokenizeSmiles
 
 
 class SmilesVocab:
-    __smiles_regex = '(\[[^\[\]]{1,6}\])'
-    __start_token = '<B>'
-    __end_token = '<EOS>'
+    __start_token_index = 0
+    __end_token_index = 1
     
-    def __init__(self, smiles_list:Iterable[str]) -> None:
-        self.__smiles_list = copy.deepcopy(smiles_list)
+    def __init__(self, vocab_smiles_list:Iterable[str]) -> None:
+        self.__vocab_smiles_list = copy.deepcopy(vocab_smiles_list)
         self.__vocab_table = self._instance_create_vocab_table()
+        
+        self.encode = self._instance_encode
+        self.decode = self._instance_decode
         
     def __str__(self) -> str:
         return self.__vocab_table.__str__()
@@ -19,57 +23,65 @@ class SmilesVocab:
         return len(self.__vocab_table)
         
     @property
-    def smiles_list(self) -> List[str]:
-        return self.__smiles_list
+    def vocab_smiles(self) -> List[str]:
+        return self.__vocab_smiles_list
     
     @property
     def vocab_table(self) -> dict:
         return self.__vocab_table
-    
-    @staticmethod
-    def replace_halogens(smiles:str) -> str:
-        '''Regex to replace Br and Cl with single letters'''
-        halogens = ['Br', 'Cl']
-        substitues = ['R', 'L']
-        for h, s in zip(halogens, substitues):
-            smiles = smiles.replace(h, s)
-        return smiles
-    
-    @staticmethod
-    def regex_split(smiles:str) -> List[str]:
-        smiles = SmilesVocab.replace_halogens(smiles)
-        frags = re.split(SmilesVocab.__smiles_regex, smiles)
-        
-        out = []
-        for frag in frags:
-            if frag.startswith('['):
-                out.append(frag)
-            else:
-                out += list(frag)
-                
-        return out
-    
-    @staticmethod
-    def tokenize_smiles(smiles:str) -> List[str]:
-        tokenized = SmilesVocab.regex_split(smiles)
-        tokenized.insert(0, SmilesVocab.__start_token)
-        tokenized.append(SmilesVocab.__end_token)
-        return tokenized
-    
+
     @staticmethod
     def unique_tokens(smiles_list:Iterable[str]) -> List[str]:
-        '''Returns a list of unique tokens in a list of SMILES strings'''
-        return list(set([SmilesVocab.regex_split(smiles) for smiles in smiles_list]))
-    
+        all_tokens = [TokenizeSmiles.tokenize(smiles, add_start_end_tokens=False) for smiles in smiles_list]
+        return list(set(all_tokens))
+        
     @staticmethod
-    def create_vocab_table(tokens:Iterable[str]) -> dict:
+    def create_vocab_table(smiles_list:Iterable[str]) -> Dict[str, int]:
         '''Assigns integer values to each token in the vocabulary'''
+        tokens = sorted(SmilesVocab.unique_tokens(smiles_list))
+        
+        # Add start and end tokens
+        token.insert(SmilesVocab.__start_token_index, TokenizeSmiles.__start_token)
+        token.insert(SmilesVocab.__end_token_index, TokenizeSmiles.__end_token)
+        
         vocab_table = {}
         for token in tokens:
-            if token not in vocab_table:
-                vocab_table[token] = len(vocab_table)
+            vocab_table[token] = len(vocab_table)
+            
         return vocab_table
-    
+        
     def _instance_create_vocab_table(self) -> dict:
-        tokens = self.unique_tokens(self.__smiles_list)
+        tokens = self.unique_tokens(self.__vocab_smiles_list)
         return self.create_vocab_table(tokens)
+    
+    @staticmethod
+    def encode(smiles:str, vocab_table:Dict[str, int]) -> np.ndarray:
+        '''Converts a list of tokens to an array of integers as defined in the vocab table'''
+        tokenized = TokenizeSmiles.tokenize(smiles)
+        return np.array([vocab_table[token] for token in tokenized])
+    
+    def _instance_encode(self, smiles:str) -> np.ndarray:
+        return SmilesVocab.encode(smiles, self.__vocab_table)
+    
+    @staticmethod
+    def decode(smiles_arr:np.ndarray, vocab_table:Dict[str, int]) -> str:
+        reversed_vocab = {v: k for k, v in vocab_table.items()}
+        
+        error_flag = False
+        decoded = []
+        for n in smiles_arr:
+            if n == SmilesVocab.__start_token_index:
+                pass
+            if n == SmilesVocab.__end_token_index:
+                break
+            try:
+                token = reversed_vocab[n]
+                decoded.append(token)
+            except:
+                error_flag = True
+                break
+            
+        return None if error_flag else TokenizeSmiles.unsub_halogens(''.join(decoded))
+
+    def _instance_decode(self, smiles_arr:np.ndarray) -> str:
+        SmilesVocab.decode(smiles_arr, self.__vocab_table)
