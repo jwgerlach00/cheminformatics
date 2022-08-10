@@ -17,14 +17,33 @@ class NeighborhoodApplicabilityDomain:
         self.surrogate_random_forest = RandomForestClassifier(class_weight="balanced")
         
         # Calculated during training
-        self.domain_fps = None
-        self.biases = []
-        self.stdevs = []
+        self.__domain_fps = None
+        self.__biases = []
+        self.__stdevs = []
         
         # Flags
-        self.trained = False
-        self.train_fp_type = None
-        self.calculate_applicability = self.__calculate_applicability
+        self.__trained = False
+        self.__train_fp_type = None
+        self.calculate_applicability = self._instance_calculate_applicability
+        
+    def __str__(self):
+        return f'NeighborhoodApplicabilityDomain(trained={self.__trained}, fingerprint_type={self.__train_fp_type})'
+    
+    @property
+    def domain_fps(self) -> np.ndarray:
+        return self.__domain_fps
+    
+    @property
+    def biases(self) -> List[float]:
+        return self.__biases
+    
+    @property
+    def stdevs(self) -> List[float]:
+        return self.__stdevs
+    
+    @property
+    def trained(self) -> bool:
+        return self.__trained
     
     @staticmethod
     def mols_2_fps(mols:Iterable[Chem.rdchem.Mol], fp_type:str='ecfp') -> List[Fingerprint]:
@@ -57,23 +76,23 @@ class NeighborhoodApplicabilityDomain:
             np.random.seed(random_seed)
         
         # Fit model
-        self.domain_fps = self.mols_2_fps(domain_mols, fp_type=fp_type)
-        self.surrogate_random_forest.fit(self.domain_fps, domain_bin_labels)
+        self.__domain_fps = self.mols_2_fps(domain_mols, fp_type=fp_type)
+        self.surrogate_random_forest.fit(self.__domain_fps, domain_bin_labels)
         
         # Get biases
-        predictions = self.surrogate_random_forest.predict_proba(self.domain_fps)
+        predictions = self.surrogate_random_forest.predict_proba(self.__domain_fps)
         
         if predictions.shape != (len(domain_mols), 2):
             raise ValueError('Too many classes')
         
-        self.biases = self.calculate_bias(predictions[:, 1], domain_bin_labels)  # Only use class 1
+        self.__biases = self.calculate_bias(predictions[:, 1], domain_bin_labels)  # Only use class 1
         
         # Get standard deviations
-        self.stdevs = self.calculate_std(self.domain_fps, self.surrogate_random_forest)
+        self.__stdevs = self.calculate_std(self.__domain_fps, self.surrogate_random_forest)
         
         # Set trained flag
-        self.trained = True
-        self.train_fp_type = fp_type
+        self.__trained = True
+        self.__train_fp_type = fp_type
         
         return self.surrogate_random_forest
     
@@ -93,11 +112,11 @@ class NeighborhoodApplicabilityDomain:
                 
         return applicability_scores
         
-    def __calculate_applicability(self, query_mols:Iterable[Chem.rdchem.Mol]) -> List[float]:
+    def _instance_calculate_applicability(self, query_mols:Iterable[Chem.rdchem.Mol]) -> List[float]:
         '''Calculate the applicability of a list of molecules to a domain'''
-        if not self.trained:
+        if not self.__trained:
             raise RuntimeError('Must train model before calculating applicability')
         else:
-            fps = self.mols_2_fps(query_mols, fp_type=self.train_fp_type)
-            return NeighborhoodApplicabilityDomain.calculate_applicability(query_fps=fps, domain_fps=self.domain_fps,
-                                                                           biases=self.biases, stdevs=self.stdevs)
+            fps = self.mols_2_fps(query_mols, fp_type=self.__train_fp_type)
+            return NeighborhoodApplicabilityDomain.calculate_applicability(query_fps=fps, domain_fps=self.__domain_fps,
+                                                                           biases=self.__biases, stdevs=self.__stdevs)
