@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='cheminformatics',
-    version='0.0.2',
+    version='0.0.3',
     license='MIT',
     author='Jacob Gerlach',
     author_email='jwgerlach00@gmail.com',
