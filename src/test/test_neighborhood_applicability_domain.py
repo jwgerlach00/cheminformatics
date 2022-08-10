@@ -111,3 +111,7 @@ class TestNeighborhoodApplicabilityDomain(unittest.TestCase):
                     static_scores
                 )
             )
+
+
+if __name__ == '__main__':
+    unittest.main()
