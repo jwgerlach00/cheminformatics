@@ -5,12 +5,6 @@ from chemi import TokenizeSmiles
 
 class TestTokenizeSmiles(unittest.TestCase):
 
-    def test_start_token(self):
-        self.assertEqual(TokenizeSmiles.start_token(), '<B>')
-
-    def test_end_token(self):
-        self.assertEqual(TokenizeSmiles.end_token(), '<EOS>')
-
     def test_sub_halogens(self):
         self.assertEqual(TokenizeSmiles.sub_halogens('BrCl'), 'RL')
 

@@ -32,17 +32,19 @@ class SmilesVocab:
 
     @staticmethod
     def unique_tokens(smiles_list:Iterable[str]) -> List[str]:
-        all_tokens = [TokenizeSmiles.tokenize(smiles, add_start_end_tokens=False) for smiles in smiles_list]
-        return list(set(all_tokens))
+        all_tokens = []
+        for smiles in smiles_list:
+            all_tokens += TokenizeSmiles.tokenize(smiles, add_start_end_tokens=False)
+        return sorted((set(all_tokens)))
         
     @staticmethod
     def create_vocab_table(smiles_list:Iterable[str]) -> Dict[str, int]:
         '''Assigns integer values to each token in the vocabulary'''
-        tokens = sorted(SmilesVocab.unique_tokens(smiles_list))
+        tokens = SmilesVocab.unique_tokens(smiles_list)
         
         # Add start and end tokens
-        token.insert(SmilesVocab.__start_token_index, TokenizeSmiles.__start_token)
-        token.insert(SmilesVocab.__end_token_index, TokenizeSmiles.__end_token)
+        tokens.insert(SmilesVocab.__start_token_index, TokenizeSmiles.start_token)
+        tokens.insert(SmilesVocab.__end_token_index, TokenizeSmiles.end_token)
         
         vocab_table = {}
         for token in tokens:
@@ -72,14 +74,15 @@ class SmilesVocab:
         for n in smiles_arr:
             if n == SmilesVocab.__start_token_index:
                 pass
-            if n == SmilesVocab.__end_token_index:
-                break
-            try:
-                token = reversed_vocab[n]
-                decoded.append(token)
-            except:
-                error_flag = True
-                break
+            else:
+                if n == SmilesVocab.__end_token_index:
+                    break
+                try:
+                    token = reversed_vocab[n]
+                    decoded.append(token)
+                except:
+                    error_flag = True
+                    break
             
         return None if error_flag else TokenizeSmiles.unsub_halogens(''.join(decoded))
 

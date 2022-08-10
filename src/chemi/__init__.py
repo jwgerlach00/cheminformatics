@@ -1,3 +1,3 @@
 from chemi.NeighborhoodApplicabilityDomain import NeighborhoodApplicabilityDomain
-from chemi.SmilesVocab import SmilesVocab
 from chemi.TokenizeSmiles import TokenizeSmiles
+from chemi.SmilesVocab import SmilesVocab
