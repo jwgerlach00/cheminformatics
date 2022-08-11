@@ -36,7 +36,7 @@ class SmilesVocab:
         for smiles in smiles_list:
             all_tokens += TokenizeSmiles.tokenize(smiles, add_start_end_tokens=False)
         return sorted((set(all_tokens)))
-        
+    
     @staticmethod
     def create_vocab_table(smiles_list:Iterable[str]) -> Dict[str, int]:
         '''Assigns integer values to each token in the vocabulary'''
@@ -46,11 +46,7 @@ class SmilesVocab:
         tokens.insert(SmilesVocab.__start_token_index, TokenizeSmiles.start_token)
         tokens.insert(SmilesVocab.__end_token_index, TokenizeSmiles.end_token)
         
-        vocab_table = {}
-        for token in tokens:
-            vocab_table[token] = len(vocab_table)
-            
-        return vocab_table
+        return {token: index for index, token in enumerate(tokens)}
         
     def _instance_create_vocab_table(self) -> dict:
         tokens = self.unique_tokens(self.__vocab_smiles_list)
