@@ -2,3 +2,4 @@ from chemi.NeighborhoodApplicabilityDomain import NeighborhoodApplicabilityDomai
 from chemi.TokenizeSmiles import TokenizeSmiles
 from chemi.SmilesVocab import SmilesVocab
 from chemi.ChemFrag import ChemFrag
+from chemi.MoleculeScorer import MoleculeScorer

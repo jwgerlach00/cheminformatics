@@ -1,5 +1,5 @@
 import copy
-from typing import Dict, Iterable, Tuple, List
+from typing import Dict, Iterable, Tuple, List, Union
 from rdkit import Chem
 from rdkit.Chem import DataStructs
 from rdkit.Chem.Descriptors import qed
@@ -34,7 +34,7 @@ class MoleculeScorer:
         self.score_on_models = self._instance_score_on_models
     
     @staticmethod
-    def generate_properties(mol:Chem.rdchem.Mol) -> Dict[str, float]:
+    def generate_properties(mol:Chem.rdchem.Mol) -> Dict[str, Union[float, int]]:
         _QED = qed(mol)
         qed_properties = QED.properties(mol)
         
@@ -52,9 +52,8 @@ class MoleculeScorer:
         reference_mol = Chem.MolFromSmiles(smiles_query)
 
         # Convert both the reference list and our molecule of interest into fingerprints
-        query_fingerprint = naclo.mols_2_ecfp([query_mol], radius=3, n_bits=1024, return_numpy=True)[0]
-        reference_fingerprint = naclo.mols_2_ecfp([reference_mol], radius=3, n_bits=1024, return_numpy=True)[0]
-        
+        query_fingerprint = naclo.mols_2_ecfp([query_mol], radius=3, n_bits=1024)[0]
+        reference_fingerprint = naclo.mols_2_ecfp([reference_mol], radius=3, n_bits=1024)[0]
         total_similarity = []
         
         # Append full molecule similarity
@@ -62,10 +61,10 @@ class MoleculeScorer:
         total_similarity.append(full_similarity)
         
         # Append decomposed fragments similiarity
-        fragments = ChemFrag(smiles_query).fragments()
+        fragments = ChemFrag(smiles_query).fragments
         for frag_smiles in fragments:
             frag_mol = Chem.MolFromSmiles(frag_smiles)
-            frag_fingerprint = naclo.mols_2_ecfp([frag_mol], radius=3, n_bits=1024, return_numpy=True)[0]
+            frag_fingerprint = naclo.mols_2_ecfp([frag_mol], radius=3, n_bits=1024, return_numpy=False)[0]
             total_similarity.append(DataStructs.FingerprintSimilarity(query_fingerprint, frag_fingerprint))
 
         # Return similarity against full refernce molecule and the max of all similarities
