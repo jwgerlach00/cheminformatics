@@ -13,6 +13,7 @@ from chemi import ChemFrag
 
 
 class MoleculeScorer:
+    '''Scores using drug-likeness, similarity to target, and model score'''
     
     def __init__(self, smiles:str, model_names:Iterable[str], desired_model_outcomes:Iterable[int],
                  model_importances:Iterable[float], models_map:Dict[str, nn.Module], smiles_query=None) -> None:
